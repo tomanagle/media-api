@@ -6,7 +6,6 @@ import (
 	"go-media/internal/storage/s3"
 	"go-media/internal/store"
 	"io"
-	"log"
 	"net/http"
 	"os"
 
@@ -83,15 +82,11 @@ func (h *UploadFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ratio := float64(width) / float64(height)
 
-	variations := []struct {
-		name   string
-		width  int
-		height int
-	}{
+	variations := []store.Variation{
 		{
-			name:  "small",
-			width: 200,
-			height: func() int {
+			Name:  "small",
+			Width: 200,
+			Height: func() int {
 				if ratio > 1 {
 					return int(200 / ratio)
 				}
@@ -99,9 +94,9 @@ func (h *UploadFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}(),
 		},
 		{
-			name:  "medium",
-			width: 400,
-			height: func() int {
+			Name:  "medium",
+			Width: 400,
+			Height: func() int {
 				if ratio > 1 {
 					return int(400 / ratio)
 				}
@@ -109,9 +104,9 @@ func (h *UploadFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}(),
 		},
 		{
-			name:  "large",
-			width: 600,
-			height: func() int {
+			Name:  "large",
+			Width: 600,
+			Height: func() int {
 				if ratio > 1 {
 					return int(600 / ratio)
 				}
@@ -121,17 +116,12 @@ func (h *UploadFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, v := range variations {
-		resized := transform.Resize(img, v.width, v.height, transform.Linear)
+		resized := transform.Resize(img, v.Width, v.Height, transform.Linear)
 
-		if err := imgio.Save(fmt.Sprintf("%s/%s-%s.png", id, id, v.name), resized, imgio.PNGEncoder()); err != nil {
+		if err := imgio.Save(fmt.Sprintf("%s/%s-%s.png", id, id, v.Name), resized, imgio.PNGEncoder()); err != nil {
 			fmt.Println(err)
 			return
 		}
-	}
-
-	files, err := os.ReadDir(id.String())
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	session, err := h.s3.NewSession()
@@ -141,12 +131,8 @@ func (h *UploadFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, f := range files {
-		if f.IsDir() {
-			continue
-		}
-
-		file, err := os.Open(fmt.Sprintf("%s/%s", id, f.Name()))
+	for index, v := range variations {
+		file, err := os.Open(fmt.Sprintf("%s/%s-%s.png", id, id, v.Name))
 
 		if err != nil {
 			httperror.Writef(w, http.StatusInternalServerError, "error opening file: %s", err.Error())
@@ -155,14 +141,15 @@ func (h *UploadFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		defer file.Close()
 
-		res, err := h.s3.Upload(session, file, fmt.Sprintf("%s/%s", id, f.Name()))
+		res, err := h.s3.Upload(session, file, fmt.Sprintf("%s/%s-%s.png", id, id, v.Name))
 
 		if err != nil {
 			httperror.Writef(w, http.StatusInternalServerError, "error uploading file: %s", err.Error())
 			return
 		}
 
-		fmt.Println(res.Location)
+		variations[index].Name = fmt.Sprintf("%s.png", v.Name)
+		variations[index].Location = res.Location
 	}
 
 	err = os.RemoveAll(id.String())
@@ -172,8 +159,9 @@ func (h *UploadFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := h.mediaStore.CreateMedia(store.CreateMediaParams{
-		MediaID: id.String(),
+	_, err = h.mediaStore.CreateMedia(store.CreateMediaParams{
+		MediaID:    id.String(),
+		Variations: variations,
 	})
 
 	if err != nil {
@@ -181,7 +169,5 @@ func (h *UploadFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(res)
-
-	w.Write([]byte("ok"))
+	w.Write([]byte("OK"))
 }

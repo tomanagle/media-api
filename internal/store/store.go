@@ -3,13 +3,10 @@ package store
 import "time"
 
 type Variation struct {
-	VariationID string    `json:"variationId" bson:"variationId"`
-	Name        string    `json:"name" bson:"name"`
-	Location    string    `json:"location" bson:"location"`
-	Width       int       `json:"width" bson:"width"`
-	Height      int       `json:"height" bson:"height"`
-	CreatedAt   time.Time `json:"createdAt" bson:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt" bson:"updatedAt"`
+	Name     string `json:"name" bson:"name"`
+	Location string `json:"location" bson:"location"`
+	Width    int    `json:"width" bson:"width"`
+	Height   int    `json:"height" bson:"height"`
 }
 type Media struct {
 	MediaID    string      `json:"mediaId" bson:"mediaId"`
@@ -19,7 +16,8 @@ type Media struct {
 }
 
 type CreateMediaParams struct {
-	MediaID string `bson:"mediaId"`
+	MediaID    string      `bson:"mediaId"`
+	Variations []Variation `bson:"variations"`
 }
 
 type MediaStore interface {

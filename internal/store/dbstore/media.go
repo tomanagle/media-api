@@ -2,7 +2,6 @@ package dbstore
 
 import (
 	"context"
-	"fmt"
 	"go-media/internal/store"
 	"time"
 
@@ -31,9 +30,10 @@ func (s *MediaStore) CreateMedia(params store.CreateMediaParams) (media *store.M
 	now := time.Now()
 
 	media = &store.Media{
-		MediaID:   params.MediaID,
-		CreatedAt: now,
-		UpdatedAt: now,
+		MediaID:    params.MediaID,
+		Variations: params.Variations,
+		CreatedAt:  now,
+		UpdatedAt:  now,
 	}
 
 	res, err := s.collection.InsertOne(context.Background(), media)
@@ -41,8 +41,6 @@ func (s *MediaStore) CreateMedia(params store.CreateMediaParams) (media *store.M
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println("res", res)
 
 	return media, nil
 }
