@@ -36,7 +36,7 @@ func (s *MediaStore) CreateMedia(params store.CreateMediaParams) (media *store.M
 		UpdatedAt:  now,
 	}
 
-	res, err := s.collection.InsertOne(context.Background(), media)
+	_, err = s.collection.InsertOne(context.Background(), media)
 
 	if err != nil {
 		return nil, err

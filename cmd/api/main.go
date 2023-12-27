@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"go-media/internal/db"
 	"go-media/internal/handlers"
+	"go-media/internal/middleware"
 	"go-media/internal/pkg/config"
 	"go-media/internal/storage/s3"
+	"go-media/internal/store"
 	"go-media/internal/store/dbstore"
 	"log/slog"
 	"net/http"
@@ -25,6 +27,46 @@ var defaultConfig = config.Config{
 
 	S3BucketName: "go-media",
 	S3AWSRegion:  "us-east-1",
+}
+
+/*
+* configure the image variations to generate here
+ */
+func GetVariations(ratio float64) []store.Variation {
+	variations := []store.Variation{
+		{
+			Name:  "small",
+			Width: 200,
+			Height: func() int {
+				if ratio > 1 {
+					return int(200 / ratio)
+				}
+				return int(200 * ratio)
+			}(),
+		},
+		{
+			Name:  "medium",
+			Width: 400,
+			Height: func() int {
+				if ratio > 1 {
+					return int(400 / ratio)
+				}
+				return int(400 * ratio)
+			}(),
+		},
+		{
+			Name:  "large",
+			Width: 600,
+			Height: func() int {
+				if ratio > 1 {
+					return int(600 / ratio)
+				}
+				return int(600 * ratio)
+			}(),
+		},
+	}
+
+	return variations
 }
 
 func main() {
@@ -66,10 +108,15 @@ func main() {
 		AWSRegion:  conf.S3AWSRegion,
 	})
 
-	r.Post("/upload", handlers.NewUploadFileHandler(handlers.NewUploadFileHandlerParams{
-		S3:         s3,
-		MediaStore: mediaStore,
-	}).ServeHTTP)
+	r.Use(middleware.NewJSONContent().Handler)
+
+	r.Route("/v1", func(r chi.Router) {
+		r.Post("/upload", handlers.NewUploadFileHandler(handlers.NewUploadFileHandlerParams{
+			S3:            s3,
+			MediaStore:    mediaStore,
+			GetVariations: GetVariations,
+		}).ServeHTTP)
+	})
 
 	// handlers
 	r.Get("/healthcheck", handlers.NewHealthCheckHandler().ServeHTTP)
