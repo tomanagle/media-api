@@ -162,7 +162,7 @@ func (h *UploadFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uploadVariations = append(uploadVariations, result)
 	}
 
-	media, err := h.mediaStore.CreateMedia(store.CreateMediaParams{
+	media, err := h.mediaStore.CreateMedia(r.Context(), store.CreateMediaParams{
 		MediaID:    id,
 		Variations: uploadVariations,
 	})

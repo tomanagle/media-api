@@ -1,6 +1,9 @@
 package store
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Variation struct {
 	Name     string `json:"name" bson:"name"`
@@ -21,5 +24,11 @@ type CreateMediaParams struct {
 }
 
 type MediaStore interface {
-	CreateMedia(params CreateMediaParams) (media *Media, err error)
+	CreateMedia(ctx context.Context, params CreateMediaParams) (media *Media, err error)
+	GetMedia(ctx context.Context, params GetMediaParams) (media []Media, err error)
+}
+
+type GetMediaParams struct {
+	Skip  int64 `bson:"skip"`
+	Limit int64 `bson:"limit"`
 }

@@ -116,6 +116,10 @@ func main() {
 			MediaStore:    mediaStore,
 			GetVariations: GetVariations,
 		}).ServeHTTP)
+
+		r.Get("/media", handlers.NewGetMediaHandler(handlers.NewGetMediaHandlerParams{
+			MediaStore: mediaStore,
+		}).ServeHTTP)
 	})
 
 	// handlers

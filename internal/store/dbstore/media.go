@@ -5,7 +5,9 @@ import (
 	"go-media/internal/store"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type MediaStore struct {
@@ -25,7 +27,7 @@ func NewMediaStore(p NewMediaStoreParams) *MediaStore {
 	}
 }
 
-func (s *MediaStore) CreateMedia(params store.CreateMediaParams) (media *store.Media, err error) {
+func (s *MediaStore) CreateMedia(ctx context.Context, params store.CreateMediaParams) (media *store.Media, err error) {
 
 	now := time.Now()
 
@@ -36,11 +38,31 @@ func (s *MediaStore) CreateMedia(params store.CreateMediaParams) (media *store.M
 		UpdatedAt:  now,
 	}
 
-	_, err = s.collection.InsertOne(context.Background(), media)
+	_, err = s.collection.InsertOne(ctx, media)
 
 	if err != nil {
 		return nil, err
 	}
 
 	return media, nil
+}
+
+func (s *MediaStore) GetMedia(ctx context.Context, params store.GetMediaParams) (media []store.Media, err error) {
+
+	opts := options.Find().SetSkip(params.Skip).SetLimit(params.Limit)
+
+	cursor, err := s.collection.Find(ctx, bson.M{}, opts)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = cursor.All(ctx, &media)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return media, nil
+
 }
