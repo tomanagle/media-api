@@ -5,6 +5,7 @@ import (
 	"go-media/internal/pkg/httperror"
 	"go-media/internal/store"
 	"net/http"
+	"strconv"
 )
 
 type GetMediaHandler struct {
@@ -21,11 +22,41 @@ func NewGetMediaHandler(params NewGetMediaHandlerParams) *GetMediaHandler {
 	}
 }
 
+type getMediaResponse struct {
+	Media []store.Media `json:"items"`
+}
+
 func (h *GetMediaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	media, err := h.mediaStore.GetMedia(r.Context(), store.GetMediaParams{
-		Skip:  0,
-		Limit: 10,
+	skipStr := r.URL.Query().Get("skip")
+	limitStr := r.URL.Query().Get("limit")
+
+	if skipStr == "" {
+		skipStr = "0"
+	}
+
+	skip, err := strconv.Atoi(skipStr)
+
+	if err != nil {
+		httperror.Writef(w, http.StatusBadRequest, "error parsing skip: %s", err.Error())
+		return
+	}
+
+	if limitStr == "" {
+		limitStr = "20"
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+
+	if err != nil {
+		httperror.Writef(w, http.StatusBadRequest, "error parsing limit: %s", err.Error())
+		return
+	}
+
+	ctx := r.Context()
+	media, err := h.mediaStore.GetMedia(ctx, store.GetMediaParams{
+		Skip:  int64(skip),
+		Limit: int64(limit),
 	})
 
 	if err != nil {
@@ -33,5 +64,16 @@ func (h *GetMediaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(media)
+	response := getMediaResponse{
+		Media: media,
+	}
+
+	responseBytes, err := json.Marshal(response)
+
+	if err != nil {
+		httperror.Writef(w, http.StatusInternalServerError, "error marshalling response: %s", err.Error())
+		return
+	}
+
+	w.Write(responseBytes)
 }

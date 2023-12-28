@@ -107,7 +107,7 @@ func TestUploadFile(t *testing.T) {
 			mockStorage.On("Upload", tc.createSessionResult, mock.Anything, tc.expectedUploadFileName).Return(tc.uploadResult, tc.uploadError)
 
 			mockMediaStore := &storeMock.MockMediaStore{}
-			mockMediaStore.On("CreateMedia", tc.expectedCreateMedia).Return(tc.createMediaResult, tc.createMediaError)
+			mockMediaStore.On("CreateMedia", mock.Anything, tc.expectedCreateMedia).Return(tc.createMediaResult, tc.createMediaError)
 
 			body := new(bytes.Buffer)
 			mw := multipart.NewWriter(body)
